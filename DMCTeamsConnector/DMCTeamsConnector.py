@@ -77,4 +77,4 @@ class DMCTeamsLogHandler(logging.Handler):
         self.conn = DMCTeamsConnector(self.webhook_url)
     
     def emit(self, record):
-        self.conn.sendHtmlMessage(record)
+        self.conn.sendHtmlMessage(record.msg)
