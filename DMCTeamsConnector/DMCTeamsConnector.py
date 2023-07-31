@@ -1,9 +1,42 @@
 from urllib import request as req
 import logging
 import json
+from threading import Thread
 
 class DMCTeamsWebhookException(Exception):
     pass
+
+def formatHtmlList(data):
+    """
+    Trata um dicionário e transforma em uma mensagem HTML
+    ex.
+    data = {
+        "title": "Título teste",
+        "list": [
+            ('Campo 1', 'Valor 1'),
+            ('Campo 2', 'Valor 2'),
+        ]
+    }
+    """
+    
+    # string com formato HTML X
+    html_format = """
+
+        <h1> {title} </h1>
+        
+        <ul> 
+            {list}
+        </ul>
+        
+    """.strip() # Não pode ter trailing spaces
+    
+    # transforma lista em HTML
+    list = ["<li> <strong>{}:</strong> {} </li>".format(v, d) for v, d in data['list']]
+    list = "".join(list)
+    
+    html = html_format.format(title = data['title'], list=list)
+    
+    return html
 
 class DMCTeamsConnector():
     """
@@ -34,34 +67,11 @@ class DMCTeamsConnector():
         
     def sendHtmlListMessage(self, data):
         """
-        Trata um dicionário e transforma em uma mensagem HTML
-        ex.
-        data = {
-            "title": "Título teste",
-            "list": [
-                ('Campo 1', 'Valor 1'),
-                ('Campo 2', 'Valor 2'),
-            ]
-        }
+        Formata os dados em HTML como uma lista
         """
         
-        # string com formato HTML X
-        html_format = """
-
-            <h1> {title} </h1>
-            
-            <ul> 
-                {list}
-            </ul>
-            
-        """.strip() # Não pode ter trailing spaces
-        
-        # transforma lista em HTML
-        list = ["<li> <strong>{}:</strong> {} </li>".format(v, d) for v, d in data['list']]
-        list = "".join(list)
-        
         # envia mensagem HTML
-        self.sendHtmlMessage(html_format.format(title = data['title'], list=list))
+        self.sendHtmlMessage(formatHtmlList(data))
         
 
 class DMCTeamsLogHandler(logging.Handler):
@@ -72,9 +82,36 @@ class DMCTeamsLogHandler(logging.Handler):
     def __init__(self, webhook_url):
         
         super().__init__()
+        self.message = "" # mensagem que será enviada
+        
         # inicia connector com o teams baseado na url recebida
         self.webhook_url = webhook_url
         self.conn = DMCTeamsConnector(self.webhook_url)
+        
+    def sendInAnotherThread(self, message):
+        """
+        Envia mensagem pelo team em outra thread
+        """
+        thread = Thread(target = self.conn.sendHtmlMessage, args = (message, ))
+        thread.start()
     
     def emit(self, record):
-        self.conn.sendHtmlMessage(record.msg)
+        try:
+            self.sendInAnotherThread(self.format(record))
+        except:
+            print("ERROR!!")
+            pass
+        
+class DMCTeamsHtmlFormatter(logging.Formatter):
+    
+    def format(self, record):
+                
+        # verifica se foi passado para o logger um argumento para html
+        if 'html' in record.__dict__ and record.html: 
+            return formatHtmlList({
+                'title': record.html_title,
+                'list': record.html_list
+            })
+        else: # senão retorna apenas a mensagem
+            return record.msg
+        
