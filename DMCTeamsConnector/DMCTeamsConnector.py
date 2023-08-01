@@ -105,13 +105,13 @@ class DMCTeamsLogHandler(logging.Handler):
 class DMCTeamsHtmlFormatter(logging.Formatter):
     
     def format(self, record):
-                
+        
         # verifica se foi passado para o logger um argumento para html
         if 'html' in record.__dict__ and record.html: 
             return formatHtmlList({
-                'title': record.html_title,
+                'title': "{}: {}".format(logging.getLevelName(record.levelno), record.html_title),
                 'list': record.html_list
             })
         else: # senão retorna apenas a mensagem
-            return record.msg
+            return "{}: {}".format(logging.getLevelName(record.levelno), record.msg)
         
