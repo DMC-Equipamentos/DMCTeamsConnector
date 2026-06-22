@@ -59,6 +59,7 @@ class DMCTeamsConnector():
         post_data = json.dumps({"text": html}).encode()
         
         # envia request
+        
         response = req.urlopen(url=request, data=post_data)
         
         # Levanta um erro caso resposta não seja 200
@@ -71,8 +72,11 @@ class DMCTeamsConnector():
         """
         
         # envia mensagem HTML
-        self.sendHtmlMessage(formatHtmlList(data))
-        
+        try:
+            self.sendHtmlMessage(formatHtmlList(data))
+        except DMCTeamsWebhookException as e:
+            print("Falha ao enviar mensagem para o Teams: {}".format(e))
+            
 
 class DMCTeamsLogHandler(logging.Handler):
     """
