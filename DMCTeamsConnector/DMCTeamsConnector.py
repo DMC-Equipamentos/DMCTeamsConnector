@@ -1,4 +1,5 @@
 from urllib import request as req
+from urllib.error import HTTPError
 import logging
 import json
 from threading import Thread
@@ -59,12 +60,16 @@ class DMCTeamsConnector():
         post_data = json.dumps({"text": html}).encode()
         
         # envia request
-        
-        response = req.urlopen(url=request, data=post_data)
-        
-        # Levanta um erro caso resposta não seja 200
-        if response.status != 200:
-            raise DMCTeamsWebhookException(response.reason) # Trata erros
+        try:
+            response = req.urlopen(url=request, data=post_data)
+            
+            # Levanta um erro caso resposta não seja 200
+            if response.status != 200:
+                raise DMCTeamsWebhookException(response.reason) # Trata erros
+        except HTTPError as e:
+            # Captura erros HTTP (403, 404, 500, etc) e converte para DMCTeamsWebhookException
+            raise DMCTeamsWebhookException(f"HTTP Error {e.code}: {e.reason}")
+
         
     def sendHtmlListMessage(self, data):
         """
